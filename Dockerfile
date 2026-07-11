@@ -18,11 +18,14 @@ RUN arch=$(dpkg --print-architecture) && \
         curl -L https://github.com/rhasspy/piper/releases/download/v1.0.0/piper_amd64.tar.gz -o piper.tar.gz; \
     elif [ "$arch" = "arm64" ]; then \
         curl -L https://github.com/rhasspy/piper/releases/download/v1.0.0/piper_arm64.tar.gz -o piper.tar.gz; \
+    else \
+        echo "Unsupported architecture: $arch" && exit 1; \
     fi && \
     tar -xzf piper.tar.gz && \
     rm piper.tar.gz && \
     mv piper/piper /usr/local/bin/piper && \
-    mv piper/lib* /usr/local/lib/ && \
+    find piper/ -name "*.so*" -exec cp -a {} /usr/local/lib/ \; && \
+    rm -rf piper && \
     ldconfig
 
 # Piper日本語モデルのダウンロード
