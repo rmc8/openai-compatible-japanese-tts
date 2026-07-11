@@ -2,6 +2,8 @@ version: '3.8'
 services:
   voicevox_engine:
     # VOICEVOX Engine Docker image (GPU version)
+    # voicevox-v1 モデルを使う場合のみ必要。
+    # openjtalk-v1 / piper-v1 のみ使う場合はこのサービスをコメントアウト可能。
     image: voicevox/voicevox_engine:nvidia-latest
     ports:
       - '50021:50021'
@@ -30,8 +32,14 @@ services:
       - "8000:8000"
     environment:
       - VOICEVOX_ENGINE_URL=http://voicevox_engine:50021
-    depends_on:
-      - voicevox_engine
+      # APIキー認証 (省略時は認証なし / ローカル開発モード)
+      # 公開環境では必ず設定してください。
+      # - API_KEY=your_secret_api_key_here
+    # voicevox-v1 を使う場合は depends_on を有効化してください。
+    # openjtalk-v1 / piper-v1 のみの場合はコメントアウト可能。
+    # depends_on:
+    #   voicevox_engine:
+    #     condition: service_healthy
     restart: unless-stopped
     deploy:
       resources:
