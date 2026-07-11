@@ -7,6 +7,7 @@ Authorization: Bearer <key> ヘッダーを検証します。
 """
 
 import os
+import secrets
 
 from fastapi import HTTPException, Request
 
@@ -21,7 +22,12 @@ async def verify_api_key(request: Request) -> None:
     - ``API_KEY`` 環境変数が **未設定** の場合は認証をスキップします（ローカル開発向け）。
     - 設定されている場合は ``Authorization: Bearer <API_KEY>`` ヘッダーを検証し、
       一致しない場合は **401 Unauthorized** を返します。
+    - ヘルスチェック・ドキュメント系のパスは認証をスキップします。
     """
+    # ヘルスチェック・OpenAPI ドキュメント系パスは認証不要
+    if request.url.path in {"/", "/docs", "/redoc", "/openapi.json"}:
+        return
+
     if _API_KEY is None:
         # APIキー未設定時は認証なし（ローカル開発モード）
         return
@@ -35,7 +41,7 @@ async def verify_api_key(request: Request) -> None:
         )
 
     provided_key = auth_header[len("Bearer "):]
-    if provided_key != _API_KEY:
+    if not secrets.compare_digest(provided_key, _API_KEY):
         raise HTTPException(
             status_code=401,
             detail="Invalid API key.",

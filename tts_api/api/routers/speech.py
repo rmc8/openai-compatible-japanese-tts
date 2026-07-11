@@ -1,3 +1,4 @@
+import asyncio
 import io
 import json
 import logging
@@ -29,7 +30,7 @@ VOICEVOX_ENGINE_URL = os.getenv("VOICEVOX_ENGINE_URL", "http://voicevox_engine:5
 PIPER_MODEL_PATH = os.getenv("PIPER_MODEL_PATH", "/app/models/ja_JP-kokoro-medium.onnx")
 
 
-def load_voice_mappings():
+def load_voice_mappings() -> dict:
     """音声IDマッピングを読み込む"""
     try:
         with open(VOICE_MAPPINGS_PATH, "r") as f:
@@ -37,6 +38,10 @@ def load_voice_mappings():
     except Exception as e:
         logger.warning(f"Failed to load voice mappings: {e}")
         return {}
+
+
+# 起動時に一度だけ読み込んでキャッシュ（リクエストごとのファイルI/Oを排除）
+VOICE_MAPPINGS: dict = load_voice_mappings()
 
 
 def get_speaker_id(voice: str) -> int:
@@ -49,7 +54,7 @@ def get_speaker_id(voice: str) -> int:
     Returns:
         int: スピーカーID
     """
-    mappings = load_voice_mappings()
+    mappings = VOICE_MAPPINGS
 
     # マッピングに存在する場合はマッピングされたIDを返す
     if voice in mappings:
@@ -240,10 +245,10 @@ async def create_speech(request: SpeechRequest, fastapi_request: Request):
             )
 
     elif "openjtalk" in model_lower:
-        wav_data = generate_openjtalk_wav(request.input)
+        wav_data = await asyncio.to_thread(generate_openjtalk_wav, request.input)
 
     elif "piper" in model_lower:
-        wav_data = generate_piper_wav(request.input, request.speed)
+        wav_data = await asyncio.to_thread(generate_piper_wav, request.input, request.speed)
 
     else:
         raise HTTPException(
@@ -255,7 +260,7 @@ async def create_speech(request: SpeechRequest, fastapi_request: Request):
     format_lower = request.response_format.lower()
 
     if format_lower == "mp3":
-        mp3_data = convert_wav_to_mp3(wav_data)
+        mp3_data = await asyncio.to_thread(convert_wav_to_mp3, wav_data)
         return Response(content=mp3_data, media_type="audio/mpeg")
     elif format_lower == "wav":
         return Response(content=wav_data, media_type="audio/wav")
@@ -264,5 +269,5 @@ async def create_speech(request: SpeechRequest, fastapi_request: Request):
         logger.warning(
             f"Unsupported format '{request.response_format}'. Falling back to MP3."
         )
-        mp3_data = convert_wav_to_mp3(wav_data)
+        mp3_data = await asyncio.to_thread(convert_wav_to_mp3, wav_data)
         return Response(content=mp3_data, media_type="audio/mpeg")
