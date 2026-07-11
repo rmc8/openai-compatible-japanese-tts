@@ -1,8 +1,10 @@
-from fastapi import APIRouter
-from pydantic import BaseModel
 from typing import List
 
+from fastapi import APIRouter
+from pydantic import BaseModel
+
 router = APIRouter()
+
 
 class Model(BaseModel):
     id: str
@@ -10,11 +12,12 @@ class Model(BaseModel):
     owned_by: str
     permission: List[dict] = []
 
+
 @router.get("/v1/models", summary="利用可能なモデル一覧を取得")
 async def list_models():
     """
     利用可能なモデルの一覧を返します。
-    現在はVOICEVOXモデルのみをサポートしています。
+    VOICEVOX, Open JTalk, Piper の各音声合成エンジンに対応しています。
     """
     return {
         "object": "list",
@@ -23,10 +26,23 @@ async def list_models():
                 "id": "voicevox-v1",
                 "object": "model",
                 "owned_by": "VOICEVOX",
-                "permission": []
-            }
-        ]
+                "permission": [],
+            },
+            {
+                "id": "openjtalk-v1",
+                "object": "model",
+                "owned_by": "Open JTalk",
+                "permission": [],
+            },
+            {
+                "id": "piper-v1",
+                "object": "model",
+                "owned_by": "Piper",
+                "permission": [],
+            },
+        ],
     }
+
 
 @router.get("/", summary="APIのルートエンドポイント")
 async def root():
@@ -39,5 +55,5 @@ async def root():
         "version": "1.0.0",
         "description": "VOICEVOXエンジンをOpenAIの音声合成APIフォーマットで利用するためのAPI",
         "documentation": "/docs",
-        "status": "running"
+        "status": "running",
     }
